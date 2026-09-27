@@ -3,33 +3,43 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    background-color: #020617;
-    color: #f8fafc;
+  html {
+    scroll-behavior: smooth;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
   }
 }
 
-/* Glassmorphism custom utilities */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.75);
+/* Custom festive celebration gradient accents */
+.bg-festival-gradient {
+  background: linear-gradient(135deg, #2e1065 0%, #1e40af 50%, #7c2d12 100%);
+}
+
+.bg-festival-glow {
+  background: radial-gradient(circle at 50% 30%, rgba(249, 115, 22, 0.15) 0%, rgba(46, 16, 101, 0.05) 50%, transparent 100%);
+}
+
+.bg-warm-card {
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(254, 243, 199, 0.6);
 }
 
-.glass-card {
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
-
-.glass-card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+::-webkit-scrollbar-track {
+  background: #fef8ee;
 }
-
-.glass-card-hover:hover {
-  transform: translateY(-4px);
-  border-color: rgba(245, 158, 11, 0.3);
-  box-shadow: 0 12px 30px -10px rgba(245, 158, 11, 0.15);
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
