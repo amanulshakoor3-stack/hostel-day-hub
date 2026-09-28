@@ -287,23 +287,86 @@ export async function upvoteSuggestion(suggestionId: string): Promise<{ success:
 }
 
 /**
- * Submit an anonymous food preference.
+ * Fetch the current Vegetarian / Non-Vegetarian vote counts.
  */
-export async function submitFoodPreference(payload: {
-  food_type: 'Vegetarian' | 'Non-Vegetarian';
-  preferred_foods: string;
-}): Promise<{ success: boolean; message?: string }> {
+export async function fetchFoodPreferenceCounts(): Promise<{
+  Vegetarian: number;
+  'Non-Vegetarian': number;
+}> {
+  const defaults = { Vegetarian: 0, 'Non-Vegetarian': 0 };
+
   if (isSupabaseConfigured && supabase) {
     try {
-      const { error } = await supabase.from('food_preferences').insert([
+      // Count Vegetarian
+      const { count: vegCount, error: vegErr } = await supabase
+        .from('food_preference_votes')
+        .select('*', { count: 'exact', head: true })
+        .eq('food_type', 'Vegetarian');
+
+      // Count Non-Vegetarian
+      const { count: nonVegCount, error: nonVegErr } = await supabase
+        .from('food_preference_votes')
+        .select('*', { count: 'exact', head: true })
+        .eq('food_type', 'Non-Vegetarian');
+
+      if (vegErr || nonVegErr) {
+        console.warn('Supabase food vote count error:', vegErr || nonVegErr);
+        // Fall through to local storage
+      } else {
+        return {
+          Vegetarian: vegCount ?? 0,
+          'Non-Vegetarian': nonVegCount ?? 0,
+        };
+      }
+    } catch (err) {
+      console.warn('Supabase food vote count fetch failed, falling back to local:', err);
+    }
+  }
+
+  // Local storage fallback
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_FOOD_PREF_KEY) || '{}';
+    const stored = JSON.parse(raw);
+    return {
+      Vegetarian: stored.Vegetarian ?? 0,
+      'Non-Vegetarian': stored['Non-Vegetarian'] ?? 0,
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+/**
+ * Cast an anonymous food preference vote.
+ *
+ * Uses the browser's anonymous token to prevent repeated votes from the same
+ * browser. The server enforces a UNIQUE(food_type, anonymous_token) constraint
+ * so even a crafted request cannot duplicate a vote from the same token.
+ *
+ * NOTE: Because there is no login, one vote per student cannot be guaranteed
+ * across different devices or browsers. This system prevents repeated votes
+ * from the same browser as best-effort protection.
+ */
+export async function castFoodPreferenceVote(
+  foodType: 'Vegetarian' | 'Non-Vegetarian'
+): Promise<{ success: boolean; alreadyVoted?: boolean; message?: string }> {
+  const token = getAnonymousToken();
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase.from('food_preference_votes').insert([
         {
-          food_type: payload.food_type,
-          preferred_foods: payload.preferred_foods.trim()
-        }
+          food_type: foodType,
+          anonymous_token: token,
+        },
       ]);
 
       if (error) {
-        console.error('Supabase food preference insert error:', error);
+        // 23505 = unique_violation → already voted
+        if (error.code === '23505') {
+          return { success: false, alreadyVoted: true };
+        }
+        console.error('Supabase food vote insert error:', error);
         return { success: false, message: error.message || 'Database error occurred.' };
       }
       return { success: true };
@@ -311,19 +374,19 @@ export async function submitFoodPreference(payload: {
       console.error('Supabase network error:', err);
       return {
         success: false,
-        message: err?.message || 'Could not connect to Supabase server. Please check connection.'
+        message: err?.message || 'Could not connect to Supabase server. Please check connection.',
       };
     }
   }
 
-  // Local storage simulation
+  // Local storage fallback for preview / unconfigured Supabase
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_FOOD_PREF_KEY) || '[]';
-    const list = JSON.parse(raw);
-    list.push({ ...payload, created_at: new Date().toISOString() });
-    localStorage.setItem(LOCAL_STORAGE_FOOD_PREF_KEY, JSON.stringify(list));
+    const raw = localStorage.getItem(LOCAL_STORAGE_FOOD_PREF_KEY) || '{}';
+    const stored = JSON.parse(raw);
+    stored[foodType] = (stored[foodType] ?? 0) + 1;
+    localStorage.setItem(LOCAL_STORAGE_FOOD_PREF_KEY, JSON.stringify(stored));
   } catch (e) {
-    console.error('Local food preference save error', e);
+    console.error('Local food vote save error', e);
   }
   return { success: true };
 }

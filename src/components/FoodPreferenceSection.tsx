@@ -1,73 +1,118 @@
-import React, { useState } from 'react';
-import { submitFoodPreference } from '../lib/supabase';
+import React, { useEffect, useState, useCallback } from 'react';
+import { castFoodPreferenceVote, fetchFoodPreferenceCounts } from '../lib/supabase';
 import { FoodType } from '../types';
-import { Salad, Drumstick, CheckCircle, AlertCircle, Loader2, Sparkles, Send } from 'lucide-react';
+import { Salad, Drumstick, CheckCircle, AlertCircle, Loader2, Sparkles, Users } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-const MAX_CHARS = 300;
+/**
+ * Food Preference Counter Section
+ *
+ * Displays two anonymous voting cards (Vegetarian / Non-Vegetarian).
+ * Each visitor can vote exactly once from the same browser.
+ *
+ * NOTE: Because there is no login/signup, one vote per *student* cannot be
+ * guaranteed across different devices or browsers. The system prevents repeated
+ * votes from the same browser via localStorage + an anonymous token that is
+ * also stored server-side with a UNIQUE constraint.
+ */
+
+const FOOD_VOTE_KEY = 'hostel_day_food_vote';
+
+function getStoredVote(): FoodType | null {
+  try {
+    const v = localStorage.getItem(FOOD_VOTE_KEY);
+    if (v === 'Vegetarian' || v === 'Non-Vegetarian') return v;
+  } catch {
+    // localStorage may be blocked in private mode
+  }
+  return null;
+}
+
+function storeVote(foodType: FoodType): void {
+  try {
+    localStorage.setItem(FOOD_VOTE_KEY, foodType);
+  } catch {
+    // silent fail
+  }
+}
 
 export const FoodPreferenceSection: React.FC = () => {
-  const [foodType, setFoodType] = useState<FoodType | ''>('');
-  const [preferredFoods, setPreferredFoods] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [counts, setCounts] = useState<{ Vegetarian: number; 'Non-Vegetarian': number }>({
+    Vegetarian: 0,
+    'Non-Vegetarian': 0,
+  });
+  const [hasVoted, setHasVoted] = useState<FoodType | null>(getStoredVote());
+  const [isLoading, setIsLoading] = useState(true);
+  const [isVoting, setIsVoting] = useState<FoodType | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuccessMessage('');
+  // Fetch current counts on mount
+  const loadCounts = useCallback(async () => {
+    try {
+      const result = await fetchFoodPreferenceCounts();
+      setCounts(result);
+    } catch (err) {
+      console.error('Failed to load food preference counts:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCounts();
+  }, [loadCounts]);
+
+  const handleVote = async (foodType: FoodType) => {
+    if (hasVoted) return;
+
+    setIsVoting(foodType);
     setErrorMessage('');
-
-    if (!foodType) {
-      setErrorMessage('Please choose your food preference (Vegetarian or Non-Vegetarian).');
-      return;
-    }
-
-    const trimmed = preferredFoods.trim();
-    if (!trimmed) {
-      setErrorMessage('Please enter at least one preferred food item.');
-      return;
-    }
-
-    if (trimmed.length < 3) {
-      setErrorMessage('Please enter a valid food item (minimum 3 characters).');
-      return;
-    }
-
-    setIsSubmitting(true);
+    setSuccessMessage('');
 
     try {
-      const res = await submitFoodPreference({
-        food_type: foodType as FoodType,
-        preferred_foods: trimmed
-      });
+      const res = await castFoodPreferenceVote(foodType);
 
       if (res.success) {
-        setSuccessMessage('Thank you! Your anonymous food preference has been submitted.');
-        setFoodType('');
-        setPreferredFoods('');
+        storeVote(foodType);
+        setHasVoted(foodType);
+        setSuccessMessage('Your food preference has been recorded.');
+
+        // Update counts optimistically
+        setCounts((prev) => ({
+          ...prev,
+          [foodType]: prev[foodType] + 1,
+        }));
+
         confetti({
           particleCount: 50,
           spread: 60,
-          origin: { y: 0.7 }
+          origin: { y: 0.7 },
         });
+      } else if (res.alreadyVoted) {
+        // The server detected this token already voted
+        storeVote(foodType);
+        setHasVoted(foodType);
+        setSuccessMessage('You have already submitted your food preference.');
       } else {
-        setErrorMessage(res.message || 'Submission failed. Please check your connection and try again.');
+        setErrorMessage(res.message || 'Vote failed. Please check your connection and try again.');
       }
     } catch (err: any) {
       setErrorMessage(err?.message || 'An unexpected error occurred. Please try again.');
     } finally {
-      setIsSubmitting(false);
+      setIsVoting(null);
     }
   };
+
+  const alreadyVotedMessage = hasVoted && !successMessage;
 
   return (
     <section id="food-preference" className="py-20 bg-festival-cream-100/60 border-b border-festival-cream-200 relative">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Card Container */}
         <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-lg border border-festival-cream-300">
-          
+
           <div className="text-center mb-8">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-festival-orange-100 text-festival-orange-800 text-xs font-bold uppercase tracking-wider mb-2">
               <Sparkles className="w-3.5 h-3.5 text-festival-orange-600" />
@@ -81,6 +126,19 @@ export const FoodPreferenceSection: React.FC = () => {
               Anonymous vote. Help our catering team prepare the right quantities and variety for everyone.
             </p>
           </div>
+
+          {/* Already Voted Banner */}
+          {alreadyVotedMessage && (
+            <div className="mb-6 p-4 rounded-2xl bg-festival-blue-50 border border-festival-blue-100 text-festival-blue-800 flex items-start gap-3 animate-fadeIn">
+              <CheckCircle className="w-5 h-5 text-festival-blue-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm sm:text-base">You have already submitted your food preference.</p>
+                <p className="text-xs text-festival-blue-600 mt-0.5">
+                  You voted for <strong>{hasVoted}</strong>. Thank you!
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Success Banner */}
           {successMessage && (
@@ -101,161 +159,114 @@ export const FoodPreferenceSection: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* Selection cards: Vegetarian vs Non-Vegetarian */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              
-              {/* Option 1: Vegetarian */}
-              <label
-                className={`relative flex items-center gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
-                  foodType === 'Vegetarian'
-                    ? 'border-emerald-500 bg-emerald-50/70 shadow-md ring-2 ring-emerald-200'
-                    : 'border-slate-200 bg-slate-50/60 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="food_type"
-                  value="Vegetarian"
-                  checked={foodType === 'Vegetarian'}
-                  onChange={() => {
-                    setFoodType('Vegetarian');
-                    setErrorMessage('');
-                  }}
-                  className="w-5 h-5 text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer"
-                />
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl ${
-                    foodType === 'Vegetarian' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700'
-                  }`}>
-                    <Salad className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block text-base sm:text-lg">
-                      Vegetarian
-                    </span>
-                    <span className="text-xs text-slate-500">Pure Veg Caterings</span>
-                  </div>
-                </div>
-              </label>
+          {/* Counter Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
-              {/* Option 2: Non-Vegetarian */}
-              <label
-                className={`relative flex items-center gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
-                  foodType === 'Non-Vegetarian'
-                    ? 'border-festival-orange-500 bg-festival-orange-50/70 shadow-md ring-2 ring-festival-orange-200'
-                    : 'border-slate-200 bg-slate-50/60 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="food_type"
-                  value="Non-Vegetarian"
-                  checked={foodType === 'Non-Vegetarian'}
-                  onChange={() => {
-                    setFoodType('Non-Vegetarian');
-                    setErrorMessage('');
-                  }}
-                  className="w-5 h-5 text-festival-orange-600 focus:ring-festival-orange-500 border-slate-300 cursor-pointer"
-                />
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl ${
-                    foodType === 'Non-Vegetarian' ? 'bg-festival-orange-600 text-white' : 'bg-festival-orange-100 text-festival-orange-700'
-                  }`}>
-                    <Drumstick className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block text-base sm:text-lg">
-                      Non-Vegetarian
-                    </span>
-                    <span className="text-xs text-slate-500">Biriyani & Starters</span>
-                  </div>
-                </div>
-              </label>
-
-            </div>
-
-            {/* Hint when nothing selected yet */}
-            {!foodType && (
-              <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 text-amber-800 text-sm text-center flex items-center justify-center gap-2">
-                <span>👆 Click either <strong>Vegetarian</strong> or <strong>Non-Vegetarian</strong> above to enter your favorite dishes.</span>
+            {/* Vegetarian Card */}
+            <div
+              className={`relative rounded-2xl border-2 p-6 text-center transition-all duration-300 ${
+                hasVoted === 'Vegetarian'
+                  ? 'border-emerald-500 bg-emerald-50/70 shadow-md ring-2 ring-emerald-200'
+                  : 'border-slate-200 bg-slate-50/60'
+              }`}
+            >
+              <div className={`mx-auto mb-3 w-14 h-14 rounded-2xl flex items-center justify-center ${
+                hasVoted === 'Vegetarian' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700'
+              }`}>
+                <Salad className="w-7 h-7" />
               </div>
-            )}
-
-            {/* Dynamic Question based on choice */}
-            {foodType === 'Vegetarian' && (
-              <div className="pt-2 animate-fadeIn">
-                <label className="block text-sm font-bold text-slate-800 mb-2">
-                  What vegetarian food would you like to have? <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <textarea
-                    rows={3}
-                    value={preferredFoods}
-                    maxLength={MAX_CHARS}
-                    onChange={(e) => setPreferredFoods(e.target.value)}
-                    placeholder="Example: Paneer biriyani, Gobi 65, veg noodles, mushroom masala"
-                    required
-                    className="w-full px-4 py-3 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50/50 text-slate-900 text-sm placeholder:text-slate-400 resize-none transition-all"
-                  />
-                  <div className="flex justify-between items-center mt-1.5 text-xs text-slate-500 px-1">
-                    <span>Be specific with your favorite dishes</span>
-                    <span className={preferredFoods.length >= MAX_CHARS ? 'text-rose-500 font-bold' : ''}>
-                      {preferredFoods.length} / {MAX_CHARS}
-                    </span>
-                  </div>
-                </div>
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900">Vegetarian</h3>
+              <div className="mt-2 flex items-center justify-center gap-1.5 text-slate-600">
+                <Users className="w-4 h-4" />
+                {isLoading ? (
+                  <span className="inline-block w-8 h-5 bg-slate-200 rounded animate-pulse" />
+                ) : (
+                  <span className="font-semibold text-base">
+                    {counts.Vegetarian} {counts.Vegetarian === 1 ? 'student' : 'students'}
+                  </span>
+                )}
               </div>
-            )}
-
-            {foodType === 'Non-Vegetarian' && (
-              <div className="pt-2 animate-fadeIn">
-                <label className="block text-sm font-bold text-slate-800 mb-2">
-                  What non-vegetarian food would you like to have? <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <textarea
-                    rows={3}
-                    value={preferredFoods}
-                    maxLength={MAX_CHARS}
-                    onChange={(e) => setPreferredFoods(e.target.value)}
-                    placeholder="Example: Chicken biriyani, chicken 65, chicken noodles, mutton gravy"
-                    required
-                    className="w-full px-4 py-3 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-festival-orange-500 focus:border-festival-orange-500 bg-slate-50/50 text-slate-900 text-sm placeholder:text-slate-400 resize-none transition-all"
-                  />
-                  <div className="flex justify-between items-center mt-1.5 text-xs text-slate-500 px-1">
-                    <span>Mention your top non-veg choices</span>
-                    <span className={preferredFoods.length >= MAX_CHARS ? 'text-rose-500 font-bold' : ''}>
-                      {preferredFoods.length} / {MAX_CHARS}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <div className="pt-2">
               <button
-                type="submit"
-                disabled={isSubmitting || !foodType || !preferredFoods.trim()}
-                className="w-full py-4 px-6 rounded-2xl font-bold text-white text-base bg-gradient-to-r from-festival-purple-900 via-festival-blue-800 to-festival-purple-900 hover:from-festival-purple-950 hover:to-festival-blue-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-4 focus:ring-festival-purple-300"
+                type="button"
+                disabled={!!hasVoted || isVoting !== null}
+                onClick={() => handleVote('Vegetarian')}
+                className={`mt-4 w-full py-3 px-4 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-4 ${
+                  hasVoted
+                    ? hasVoted === 'Vegetarian'
+                      ? 'bg-emerald-600 text-white cursor-default opacity-90'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:from-emerald-700 hover:to-emerald-600 shadow-md hover:shadow-lg focus:ring-emerald-300'
+                }`}
               >
-                {isSubmitting ? (
+                {isVoting === 'Vegetarian' ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Submitting Food Preference...</span>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Casting vote…</span>
+                  </>
+                ) : hasVoted === 'Vegetarian' ? (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Voted</span>
                   </>
                 ) : (
-                  <>
-                    <Send className="w-5 h-5 text-festival-orange-400" />
-                    <span>Submit Food Preference</span>
-                  </>
+                  <span>I Prefer Vegetarian</span>
                 )}
               </button>
             </div>
 
-          </form>
+            {/* Non-Vegetarian Card */}
+            <div
+              className={`relative rounded-2xl border-2 p-6 text-center transition-all duration-300 ${
+                hasVoted === 'Non-Vegetarian'
+                  ? 'border-festival-orange-500 bg-festival-orange-50/70 shadow-md ring-2 ring-festival-orange-200'
+                  : 'border-slate-200 bg-slate-50/60'
+              }`}
+            >
+              <div className={`mx-auto mb-3 w-14 h-14 rounded-2xl flex items-center justify-center ${
+                hasVoted === 'Non-Vegetarian' ? 'bg-festival-orange-600 text-white' : 'bg-festival-orange-100 text-festival-orange-700'
+              }`}>
+                <Drumstick className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900">Non-Vegetarian</h3>
+              <div className="mt-2 flex items-center justify-center gap-1.5 text-slate-600">
+                <Users className="w-4 h-4" />
+                {isLoading ? (
+                  <span className="inline-block w-8 h-5 bg-slate-200 rounded animate-pulse" />
+                ) : (
+                  <span className="font-semibold text-base">
+                    {counts['Non-Vegetarian']} {counts['Non-Vegetarian'] === 1 ? 'student' : 'students'}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                disabled={!!hasVoted || isVoting !== null}
+                onClick={() => handleVote('Non-Vegetarian')}
+                className={`mt-4 w-full py-3 px-4 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-4 ${
+                  hasVoted
+                    ? hasVoted === 'Non-Vegetarian'
+                      ? 'bg-festival-orange-600 text-white cursor-default opacity-90'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-festival-orange-600 to-festival-orange-500 text-white hover:from-festival-orange-700 hover:to-festival-orange-600 shadow-md hover:shadow-lg focus:ring-festival-orange-300'
+                }`}
+              >
+                {isVoting === 'Non-Vegetarian' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Casting vote…</span>
+                  </>
+                ) : hasVoted === 'Non-Vegetarian' ? (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Voted</span>
+                  </>
+                ) : (
+                  <span>I Prefer Non-Vegetarian</span>
+                )}
+              </button>
+            </div>
+
+          </div>
 
         </div>
 

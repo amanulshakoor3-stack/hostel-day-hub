@@ -41,10 +41,10 @@ export interface Suggestion {
 
 export type FoodType = 'Vegetarian' | 'Non-Vegetarian';
 
-export interface FoodPreference {
+export interface FoodPreferenceVote {
   id?: string;
   food_type: FoodType;
-  preferred_foods: string;
+  anonymous_token: string;
   created_at?: string;
 }
 
