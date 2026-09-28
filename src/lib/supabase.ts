@@ -287,7 +287,7 @@ export async function upvoteSuggestion(suggestionId: string): Promise<{ success:
 }
 
 /**
- * Fetch the current Vegetarian / Non-Vegetarian vote counts.
+ * Fetch current Vegetarian / Non-Vegetarian totals from food_preferences table.
  */
 export async function fetchFoodPreferenceCounts(): Promise<{
   Vegetarian: number;
@@ -299,19 +299,18 @@ export async function fetchFoodPreferenceCounts(): Promise<{
     try {
       // Count Vegetarian
       const { count: vegCount, error: vegErr } = await supabase
-        .from('food_preference_votes')
+        .from('food_preferences')
         .select('*', { count: 'exact', head: true })
         .eq('food_type', 'Vegetarian');
 
       // Count Non-Vegetarian
       const { count: nonVegCount, error: nonVegErr } = await supabase
-        .from('food_preference_votes')
+        .from('food_preferences')
         .select('*', { count: 'exact', head: true })
         .eq('food_type', 'Non-Vegetarian');
 
       if (vegErr || nonVegErr) {
-        console.warn('Supabase food vote count error:', vegErr || nonVegErr);
-        // Fall through to local storage
+        console.warn('Supabase food preferences count error:', vegErr || nonVegErr);
       } else {
         return {
           Vegetarian: vegCount ?? 0,
@@ -319,54 +318,57 @@ export async function fetchFoodPreferenceCounts(): Promise<{
         };
       }
     } catch (err) {
-      console.warn('Supabase food vote count fetch failed, falling back to local:', err);
+      console.warn('Supabase food preferences fetch failed, falling back to local:', err);
     }
   }
 
   // Local storage fallback
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_FOOD_PREF_KEY) || '{}';
-    const stored = JSON.parse(raw);
-    return {
-      Vegetarian: stored.Vegetarian ?? 0,
-      'Non-Vegetarian': stored['Non-Vegetarian'] ?? 0,
-    };
+    const raw = localStorage.getItem(LOCAL_STORAGE_FOOD_PREF_KEY) || '[]';
+    const list = JSON.parse(raw);
+    let veg = 0;
+    let nonVeg = 0;
+    if (Array.isArray(list)) {
+      list.forEach((item: any) => {
+        if (item.food_type === 'Vegetarian') veg++;
+        if (item.food_type === 'Non-Vegetarian') nonVeg++;
+      });
+    } else if (typeof list === 'object') {
+      veg = list.Vegetarian || 0;
+      nonVeg = list['Non-Vegetarian'] || 0;
+    }
+    return { Vegetarian: veg, 'Non-Vegetarian': nonVeg };
   } catch {
     return defaults;
   }
 }
 
 /**
- * Cast an anonymous food preference vote.
- *
- * Uses the browser's anonymous token to prevent repeated votes from the same
- * browser. The server enforces a UNIQUE(food_type, anonymous_token) constraint
- * so even a crafted request cannot duplicate a vote from the same token.
- *
- * NOTE: Because there is no login, one vote per student cannot be guaranteed
- * across different devices or browsers. This system prevents repeated votes
- * from the same browser as best-effort protection.
+ * Submit a student's food preference (name, year, food_type).
  */
-export async function castFoodPreferenceVote(
-  foodType: 'Vegetarian' | 'Non-Vegetarian'
-): Promise<{ success: boolean; alreadyVoted?: boolean; message?: string }> {
-  const token = getAnonymousToken();
+export async function submitFoodPreference(payload: {
+  student_name: string;
+  year: 'First Year' | 'Second Year' | 'Third Year' | 'Fourth Year';
+  food_type: 'Vegetarian' | 'Non-Vegetarian';
+}): Promise<{ success: boolean; message?: string }> {
+  const cleanName = payload.student_name.trim();
+
+  if (!cleanName) {
+    return { success: false, message: 'Please enter your name.' };
+  }
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { error } = await supabase.from('food_preference_votes').insert([
+      const { error } = await supabase.from('food_preferences').insert([
         {
-          food_type: foodType,
-          anonymous_token: token,
+          student_name: cleanName,
+          year: payload.year,
+          food_type: payload.food_type,
         },
       ]);
 
       if (error) {
-        // 23505 = unique_violation → already voted
-        if (error.code === '23505') {
-          return { success: false, alreadyVoted: true };
-        }
-        console.error('Supabase food vote insert error:', error);
+        console.error('Supabase food preference insert error:', error);
         return { success: false, message: error.message || 'Database error occurred.' };
       }
       return { success: true };
@@ -379,14 +381,24 @@ export async function castFoodPreferenceVote(
     }
   }
 
-  // Local storage fallback for preview / unconfigured Supabase
+  // Local storage simulation fallback
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_FOOD_PREF_KEY) || '{}';
-    const stored = JSON.parse(raw);
-    stored[foodType] = (stored[foodType] ?? 0) + 1;
-    localStorage.setItem(LOCAL_STORAGE_FOOD_PREF_KEY, JSON.stringify(stored));
+    const raw = localStorage.getItem(LOCAL_STORAGE_FOOD_PREF_KEY) || '[]';
+    let list: any[] = [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) list = parsed;
+    } catch {}
+
+    list.push({
+      student_name: cleanName,
+      year: payload.year,
+      food_type: payload.food_type,
+      created_at: new Date().toISOString(),
+    });
+    localStorage.setItem(LOCAL_STORAGE_FOOD_PREF_KEY, JSON.stringify(list));
   } catch (e) {
-    console.error('Local food vote save error', e);
+    console.error('Local food preference save error', e);
   }
   return { success: true };
 }
