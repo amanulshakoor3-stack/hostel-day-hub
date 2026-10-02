@@ -3,7 +3,7 @@ import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { IntroSection } from './components/IntroSection';
 import { ScheduleSection } from './components/ScheduleSection';
-import { DinnerMenuSection } from './components/DinnerMenuSection';
+import { FoodAnnouncementSection } from './components/FoodAnnouncementSection';
 import { FoodPreferenceSection } from './components/FoodPreferenceSection';
 import { SuggestionFormSection } from './components/SuggestionFormSection';
 import { ApprovedSuggestionsSection } from './components/ApprovedSuggestionsSection';
@@ -33,23 +33,23 @@ export const App: React.FC = () => {
         {/* 3. Hostel Day introduction */}
         <IntroSection />
 
-        {/* 4. Hostel Day Function Time Table */}
+        {/* 4. Hostel Day Programmes */}
         <ScheduleSection />
 
-        {/* 5. Dinner Menu */}
-        <DinnerMenuSection />
+        {/* 5. Food Announcement */}
+        <FoodAnnouncementSection />
 
-        {/* Food Preference Section */}
+        {/* 6. Food Preference Section */}
         <FoodPreferenceSection />
 
-        {/* 6. Student suggestion call-to-action & Form */}
+        {/* 7. Student suggestion call-to-action & Form */}
         <SuggestionFormSection />
 
-        {/* 7. Preview of approved student suggestions */}
+        {/* 8. Preview of approved student suggestions */}
         <ApprovedSuggestionsSection />
       </main>
 
-      {/* 8. Footer */}
+      {/* 9. Footer */}
       <Footer />
     </div>
   );

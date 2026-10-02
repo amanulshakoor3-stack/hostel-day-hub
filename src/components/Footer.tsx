@@ -34,7 +34,6 @@ export const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* Col 2: Event Details */}
           <div>
             <h4 className="text-base font-bold text-white font-display uppercase tracking-wider mb-4 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-festival-orange-400" />
@@ -43,19 +42,19 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 text-sm text-festival-purple-100/80">
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-festival-orange-400" />
-                <span>Starts at 3:30 PM with Welcome Address</span>
+                <span>Welcome Address and Official Speeches</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-festival-orange-400" />
-                <span>Senior Speech & Dress Distribution</span>
+                <span>Senior Speech and Dress Distribution</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-festival-orange-400" />
-                <span>Grand Dinner Feast (7:03 PM – 9:00 PM)</span>
+                <span>Solo Singing, Solo Dance and Group Dance</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-festival-orange-400" />
-                <span>DJ Party: 10:15 PM – 1:00 AM</span>
+                <span>Grand DJ Party to End the Night</span>
               </li>
             </ul>
           </div>

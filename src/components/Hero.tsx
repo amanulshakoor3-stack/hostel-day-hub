@@ -93,8 +93,8 @@ export const Hero: React.FC<HeroProps> = ({ onShareClick, onViewClick }) => {
               <HeartHandshake className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs text-festival-cream-200">Dinner Feast</p>
-              <p className="text-sm font-bold text-white">Biriyani & Unlimited Ice Cream</p>
+              <p className="text-xs text-festival-cream-200">Grand Feast</p>
+              <p className="text-sm font-bold text-white">Special Dinner Awaits</p>
             </div>
           </div>
           <div className="col-span-2 md:col-span-1 bg-white/5 backdrop-blur-sm rounded-xl p-3.5 border border-white/10 flex items-center gap-3">

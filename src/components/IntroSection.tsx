@@ -22,9 +22,9 @@ export const IntroSection: React.FC = () => {
             <div className="w-12 h-12 mx-auto rounded-xl bg-festival-purple-100 text-festival-purple-700 flex items-center justify-center mb-4">
               <Calendar className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-slate-800 text-lg mb-1">Grand Schedule</h3>
+            <h3 className="font-bold text-slate-800 text-lg mb-1">Grand Programme</h3>
             <p className="text-sm text-slate-500">
-              An action-packed itinerary from afternoon inaugural speeches to the midnight DJ party.
+              An action-packed lineup of ceremonies, cultural performances, and a grand DJ party.
             </p>
           </div>
 

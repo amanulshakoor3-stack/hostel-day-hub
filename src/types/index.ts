@@ -51,16 +51,6 @@ export interface FoodPreference {
 
 export interface ProgrammeItem {
   id: number;
-  time: string;
   programme: string;
-  category?: 'ceremony' | 'refreshment' | 'special' | 'cultural' | 'food' | 'party' | 'end';
-}
-
-export interface DinnerItem {
-  id: string;
-  name: string;
-  category: 'Non-Veg' | 'Veg' | 'Dessert';
-  badge: string;
-  description: string;
-  iconName: string;
+  category?: 'ceremony' | 'refreshment' | 'special' | 'cultural' | 'food' | 'party';
 }
