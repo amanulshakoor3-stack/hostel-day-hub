@@ -1,13 +1,24 @@
 export type Department =
   | 'CSE'
-  | 'Cyber'
   | 'AIML'
+  | 'CYBER'
+  | 'Cyber'
   | 'AIDS'
   | 'ECE'
   | 'BME'
-  | 'IT'
-  | 'R&A'
-  | 'FT';
+  | 'FT'
+  | 'IT';
+
+export const DEPARTMENTS = [
+  'CSE',
+  'AIML',
+  'CYBER',
+  'AIDS',
+  'ECE',
+  'BME',
+  'FT',
+  'IT'
+] as const;
 
 export type Year =
   | 'First Year'
@@ -35,26 +46,6 @@ export interface PerformanceRegistration {
   description?: string | null;
   created_at?: string;
 }
-
-export const PERFORMANCE_DEPARTMENTS = [
-  'CSE',
-  'Cyber',
-  'AIML',
-  'AIDS',
-  'ECE',
-  'BME',
-  'IT',
-  'R&A',
-  'FT',
-  'Computer Science and Engineering',
-  'Information Technology',
-  'Electronics and Communication Engineering',
-  'Electrical and Electronics Engineering',
-  'Mechanical Engineering',
-  'Civil Engineering',
-  'Artificial Intelligence and Data Science',
-  'Other'
-] as const;
 
 export type SuggestionCategory =
   | 'Cultural Programs'

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { submitAnonymousSuggestion } from '../lib/supabase';
-import { Department, Year, SuggestionCategory } from '../types';
+import { Department, Year, SuggestionCategory, DEPARTMENTS } from '../types';
 import { 
   MessageSquarePlus, 
   Send, 
@@ -11,18 +11,6 @@ import {
   HelpCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-
-const DEPARTMENTS: Department[] = [
-  'CSE',
-  'Cyber',
-  'AIML',
-  'AIDS',
-  'ECE',
-  'BME',
-  'IT',
-  'R&A',
-  'FT'
-];
 
 const YEARS: Year[] = [
   'First Year',

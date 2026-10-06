@@ -48,7 +48,7 @@ const INITIAL_APPROVED_SUGGESTIONS: Suggestion[] = [
   },
   {
     id: 'mock-sugg-3',
-    department: 'R&A',
+    department: 'AIML',
     year: 'Fourth Year',
     category: 'Games and Sports',
     title: 'Inter-Floor Tug of War Challenge',

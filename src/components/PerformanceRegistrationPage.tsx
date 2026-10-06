@@ -18,7 +18,7 @@ import {
   Building2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { PerformanceType, Year } from '../types';
+import { PerformanceType, Year, DEPARTMENTS } from '../types';
 import { submitPerformanceRegistration } from '../lib/supabase';
 
 const YEARS: Year[] = ['First Year', 'Second Year', 'Third Year', 'Fourth Year'];
@@ -719,29 +719,11 @@ export const PerformanceRegistrationPage: React.FC<PerformanceRegistrationPagePr
                         <option value="" disabled>
                           Select your department
                         </option>
-                        {/* Existing website departments */}
-                        <optgroup label="College Departments">
-                          <option value="CSE">CSE (Computer Science and Engineering)</option>
-                          <option value="IT">IT (Information Technology)</option>
-                          <option value="ECE">ECE (Electronics and Communication Engineering)</option>
-                          <option value="AIML">AIML (Artificial Intelligence & Machine Learning)</option>
-                          <option value="AIDS">AIDS (Artificial Intelligence and Data Science)</option>
-                          <option value="Cyber">Cyber (Cyber Security)</option>
-                          <option value="BME">BME (Biomedical Engineering)</option>
-                          <option value="R&A">R&A (Robotics & Automation)</option>
-                          <option value="FT">FT (Food Technology)</option>
-                        </optgroup>
-                        {/* Standard department names */}
-                        <optgroup label="Engineering Departments">
-                          <option value="Computer Science and Engineering">Computer Science and Engineering</option>
-                          <option value="Information Technology">Information Technology</option>
-                          <option value="Electronics and Communication Engineering">Electronics and Communication Engineering</option>
-                          <option value="Electrical and Electronics Engineering">Electrical and Electronics Engineering</option>
-                          <option value="Mechanical Engineering">Mechanical Engineering</option>
-                          <option value="Civil Engineering">Civil Engineering</option>
-                          <option value="Artificial Intelligence and Data Science">Artificial Intelligence and Data Science</option>
-                          <option value="Other">Other</option>
-                        </optgroup>
+                        {DEPARTMENTS.map((dept) => (
+                          <option key={dept} value={dept}>
+                            {dept}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
