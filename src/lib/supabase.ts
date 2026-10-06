@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Suggestion } from '../types';
+import { Suggestion, PerformanceType, Year } from '../types';
 import { getAnonymousToken, getLocallyUpvotedIds, markLocallyUpvoted } from './token';
 
 const rawUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
@@ -21,6 +21,7 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
 // Mock database storage for instant local demo before Supabase credentials are added
 const LOCAL_STORAGE_SUGGESTIONS_KEY = 'hostel_day_local_suggestions_cache';
 const LOCAL_STORAGE_FOOD_PREF_KEY = 'hostel_day_local_food_preferences';
+const LOCAL_STORAGE_PERFORMANCE_KEY = 'hostel_day_local_performance_registrations';
 
 const INITIAL_APPROVED_SUGGESTIONS: Suggestion[] = [
   {
@@ -409,5 +410,129 @@ function saveFoodPreferenceLocally(name: string, year: string, foodType: string)
     localStorage.setItem(LOCAL_STORAGE_FOOD_PREF_KEY, JSON.stringify(list));
   } catch (e) {
     console.error('Local food preference save error', e);
+  }
+}
+
+/**
+ * Submit a student or group performance registration.
+ */
+export async function submitPerformanceRegistration(payload: {
+  performance_type: PerformanceType;
+  performance_name?: string | null;
+  participant_name: string;
+  department: string;
+  year: Year;
+  group_name?: string | null;
+  group_members?: string | null;
+  description?: string | null;
+}): Promise<{ success: boolean; message?: string }> {
+  const cleanParticipantName = payload.participant_name?.trim() || '';
+  const cleanDept = payload.department?.trim() || '';
+  const cleanYear = payload.year;
+  const cleanPerformanceName = payload.performance_name?.trim() || null;
+  const cleanGroupName = payload.group_name?.trim() || null;
+  const cleanGroupMembers = payload.group_members?.trim() || null;
+  const cleanDescription = payload.description?.trim() || null;
+
+  if (!cleanParticipantName) {
+    if (payload.performance_type === 'Group Dance' || payload.performance_type === 'Group Song') {
+      return { success: false, message: 'Please enter Main Participant / Group Leader Name.' };
+    }
+    return { success: false, message: 'Please enter your name.' };
+  }
+
+  if (cleanParticipantName.length > 100) {
+    return { success: false, message: 'Name must not exceed 100 characters.' };
+  }
+
+  if (!cleanDept) {
+    return { success: false, message: 'Please select your department.' };
+  }
+
+  if (!cleanYear) {
+    return { success: false, message: 'Please select your year.' };
+  }
+
+  if (payload.performance_type === 'Group Dance' || payload.performance_type === 'Group Song') {
+    if (!cleanGroupName) {
+      return { success: false, message: 'Please enter Group Name.' };
+    }
+    if (cleanGroupName.length > 100) {
+      return { success: false, message: 'Group Name must not exceed 100 characters.' };
+    }
+    if (!cleanGroupMembers) {
+      return { success: false, message: 'Please enter Group Member Names.' };
+    }
+    if (cleanGroupMembers.length > 2000) {
+      return { success: false, message: 'Group Member Names list is too long (maximum 2000 characters).' };
+    }
+  }
+
+  if (payload.performance_type === 'Extra Performance') {
+    if (!cleanPerformanceName) {
+      return { success: false, message: 'Please enter Performance / Activity Name.' };
+    }
+    if (cleanPerformanceName.length > 120) {
+      return { success: false, message: 'Performance / Activity Name must not exceed 120 characters.' };
+    }
+  }
+
+  if (cleanDescription && cleanDescription.length > 1000) {
+    return { success: false, message: 'Short description must not exceed 1000 characters.' };
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase.from('performance_registrations').insert([
+        {
+          performance_type: payload.performance_type,
+          performance_name: cleanPerformanceName,
+          participant_name: cleanParticipantName,
+          department: cleanDept,
+          year: cleanYear,
+          group_name: cleanGroupName,
+          group_members: cleanGroupMembers,
+          description: cleanDescription,
+        },
+      ]);
+
+      if (error) {
+        console.error('Supabase performance registration insert error:', error);
+        return { success: false, message: error.message || 'Database error occurred.' };
+      }
+      return { success: true };
+    } catch (err: any) {
+      console.error('Supabase network error during performance registration:', err);
+      return { success: false, message: err?.message || 'Network error occurred. Please try again.' };
+    }
+  }
+
+  // Fallback locally if Supabase is offline/not configured
+  savePerformanceLocally({
+    performance_type: payload.performance_type,
+    performance_name: cleanPerformanceName,
+    participant_name: cleanParticipantName,
+    department: cleanDept,
+    year: cleanYear,
+    group_name: cleanGroupName,
+    group_members: cleanGroupMembers,
+    description: cleanDescription,
+    created_at: new Date().toISOString(),
+  });
+  return { success: true };
+}
+
+function savePerformanceLocally(record: any) {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_PERFORMANCE_KEY) || '[]';
+    let list: any[] = [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) list = parsed;
+    } catch {}
+    list.push(record);
+    localStorage.setItem(LOCAL_STORAGE_PERFORMANCE_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.error('Local performance registration save error', e);
   }
 }

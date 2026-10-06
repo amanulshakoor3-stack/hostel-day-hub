@@ -15,6 +15,47 @@ export type Year =
   | 'Third Year'
   | 'Fourth Year';
 
+export type PerformanceType =
+  | 'Solo Dance'
+  | 'Solo Song'
+  | 'Group Dance'
+  | 'Group Song'
+  | 'Rampwalk'
+  | 'Extra Performance';
+
+export interface PerformanceRegistration {
+  id?: string;
+  performance_type: PerformanceType;
+  performance_name?: string | null;
+  participant_name: string;
+  department: string;
+  year: Year;
+  group_name?: string | null;
+  group_members?: string | null;
+  description?: string | null;
+  created_at?: string;
+}
+
+export const PERFORMANCE_DEPARTMENTS = [
+  'CSE',
+  'Cyber',
+  'AIML',
+  'AIDS',
+  'ECE',
+  'BME',
+  'IT',
+  'R&A',
+  'FT',
+  'Computer Science and Engineering',
+  'Information Technology',
+  'Electronics and Communication Engineering',
+  'Electrical and Electronics Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Artificial Intelligence and Data Science',
+  'Other'
+] as const;
+
 export type SuggestionCategory =
   | 'Cultural Programs'
   | 'Games and Sports'
