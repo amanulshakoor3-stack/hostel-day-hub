@@ -59,6 +59,7 @@ export type SuggestionStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Suggestion {
   id: string;
+  student_name?: string; // Private — never exposed publicly
   department: Department;
   year: Year;
   category: SuggestionCategory;

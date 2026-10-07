@@ -41,6 +41,7 @@ interface FoodRecord {
 
 interface SuggestionRecord {
   id: string;
+  student_name?: string | null;
   department: string;
   year: string;
   category: string;
@@ -193,7 +194,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         !q ||
         s.title.toLowerCase().includes(q) ||
         s.description.toLowerCase().includes(q) ||
-        s.department.toLowerCase().includes(q);
+        s.department.toLowerCase().includes(q) ||
+        (s.student_name && s.student_name.toLowerCase().includes(q));
 
       const matchesCategory = suggCategoryFilter === 'all' || s.category === suggCategoryFilter;
       return matchesSearch && matchesCategory;
@@ -852,7 +854,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </span>
                       </div>
                       <h4 className="text-base font-bold text-white mb-2">{s.title}</h4>
-                      <p className="text-sm text-slate-300 leading-relaxed">{s.description}</p>
+                      <p className="text-sm text-slate-300 leading-relaxed mb-3">{s.description}</p>
+                      {/* Student Name — shown only in the protected Admin Panel */}
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="font-semibold text-slate-400">Student Name:</span>
+                        <span className={s.student_name ? 'text-festival-orange-300 font-medium' : 'text-slate-500 italic'}>
+                          {s.student_name || 'Name not provided'}
+                        </span>
+                      </div>
                     </div>
                     <div className="pt-4 mt-4 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-400">
                       <span>

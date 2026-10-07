@@ -28,11 +28,13 @@ const CATEGORIES: SuggestionCategory[] = [
   'Other'
 ];
 
+const NAME_MAX = 100;
 const TITLE_MAX = 100;
 const DESC_MIN = 10;
 const DESC_MAX = 600;
 
 export const SuggestionFormSection: React.FC = () => {
+  const [studentName, setStudentName] = useState('');
   const [department, setDepartment] = useState<Department | ''>('');
   const [year, setYear] = useState<Year | ''>('');
   const [category, setCategory] = useState<SuggestionCategory | ''>('');
@@ -47,6 +49,16 @@ export const SuggestionFormSection: React.FC = () => {
     e.preventDefault();
     setSuccessMessage('');
     setErrorMessage('');
+
+    const trimmedName = studentName.trim();
+    if (!trimmedName) {
+      setErrorMessage('Please enter your name.');
+      return;
+    }
+    if (trimmedName.length > NAME_MAX) {
+      setErrorMessage(`Name must not exceed ${NAME_MAX} characters.`);
+      return;
+    }
 
     if (!department) {
       setErrorMessage('Please select your department.');
@@ -77,6 +89,7 @@ export const SuggestionFormSection: React.FC = () => {
 
     try {
       const res = await submitAnonymousSuggestion({
+        student_name: trimmedName,
         department,
         year,
         category,
@@ -85,7 +98,8 @@ export const SuggestionFormSection: React.FC = () => {
       });
 
       if (res.success) {
-        setSuccessMessage('Awesome! Your suggestion is now live on the suggestions board.');
+        setSuccessMessage('Thank you! Your anonymous suggestion has been submitted successfully.');
+        setStudentName('');
         setDepartment('');
         setYear('');
         setCategory('');
@@ -135,7 +149,7 @@ export const SuggestionFormSection: React.FC = () => {
             <ShieldCheck className="w-5 h-5 text-festival-purple-700 shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="font-bold">
-                No login required. Share your idea anonymously by selecting your department and year.
+                Your name is kept private. Suggestions are published anonymously on the board.
               </p>
               <p className="text-xs text-festival-purple-700/80 mt-0.5">
                 Your suggestion is instantly published on the board below for fellow hostellers to upvote!
@@ -163,7 +177,7 @@ export const SuggestionFormSection: React.FC = () => {
                 }}
                 className="shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
               >
-                View & Vote ↓
+                View &amp; Vote ↓
               </button>
             </div>
           )}
@@ -178,6 +192,31 @@ export const SuggestionFormSection: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             
+            {/* Name Field */}
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label htmlFor="suggestion-student-name" className="block text-sm font-bold text-slate-800">
+                  Name <span className="text-rose-500">*</span>
+                </label>
+                <span className="text-xs text-slate-400">
+                  {studentName.length}/{NAME_MAX}
+                </span>
+              </div>
+              <input
+                id="suggestion-student-name"
+                type="text"
+                maxLength={NAME_MAX}
+                value={studentName}
+                onChange={(e) => setStudentName(e.target.value)}
+                placeholder="Enter your name"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-800 text-sm focus:ring-2 focus:ring-festival-purple-500 focus:border-festival-purple-500 shadow-sm placeholder:text-slate-400 transition-all"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Your name is kept private and will not be shown publicly.
+              </p>
+            </div>
+
             {/* Department & Year Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               

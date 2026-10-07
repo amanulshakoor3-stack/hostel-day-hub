@@ -109,3 +109,44 @@ CREATE TABLE IF NOT EXISTS public.performance_registrations (
 ALTER TABLE public.performance_registrations ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow anon insert performance_registrations" ON public.performance_registrations FOR INSERT TO anon WITH CHECK (true);
+
+-- ============================================================
+-- STUDENT SUGGESTION PRIVACY: Add private student_name column
+-- Run this migration once against your existing database.
+-- ============================================================
+
+-- 1. Add the private name column (safe to run multiple times)
+ALTER TABLE public.suggestions
+    ADD COLUMN IF NOT EXISTS student_name TEXT;
+
+-- 2. Replace the open anon SELECT policy with one that restricts
+--    which columns public visitors can read.
+--    We drop the old blanket SELECT policy and create a secure view
+--    that exposes only safe public fields instead.
+
+-- Drop the old open policy (re-run safe: IF EXISTS guard)
+DROP POLICY IF EXISTS "Allow anon select suggestions" ON public.suggestions;
+
+-- 3. Create a public view that intentionally omits student_name,
+--    department, and year so they are never returned to anonymous callers.
+CREATE OR REPLACE VIEW public.public_suggestions AS
+    SELECT
+        id,
+        category,
+        title,
+        description,
+        status,
+        created_at
+    FROM public.suggestions
+    WHERE status != 'rejected';
+
+-- Grant anon users read access to the safe public view only
+GRANT SELECT ON public.public_suggestions TO anon;
+
+-- NOTE: The app's public fetchApprovedSuggestions() already queries
+-- the 'suggestions' table with an explicit column list that excludes
+-- student_name, department, and year. The view above adds a
+-- database-level guarantee in case the query is ever called directly.
+--
+-- Admin queries use the Supabase service-role key (server-side / admin
+-- only) and can still read all columns including student_name.

@@ -151,8 +151,10 @@ export async function fetchApprovedSuggestions(): Promise<Suggestion[]> {
 /**
  * Submit an anonymous suggestion.
  * Automatically set to 'approved' so it appears on the suggestions board immediately for upvoting.
+ * The student_name is stored privately and never returned in public queries.
  */
 export async function submitAnonymousSuggestion(payload: {
+  student_name: string;
   department: string;
   year: string;
   category: string;
@@ -160,6 +162,7 @@ export async function submitAnonymousSuggestion(payload: {
   description: string;
 }): Promise<{ success: boolean; message?: string; suggestion?: Suggestion }> {
   const newSuggestionData = {
+    student_name: payload.student_name.trim(),
     department: payload.department,
     year: payload.year,
     category: payload.category,
@@ -181,9 +184,15 @@ export async function submitAnonymousSuggestion(payload: {
       }
 
       const inserted = data && data[0] ? data[0] : null;
+      // Strip student_name before returning to caller so it never enters public state
+      const publicSuggestion = inserted
+        ? (({ student_name: _name, department: _dept, year: _yr, ...rest }) => rest)(inserted)
+        : null;
       return {
         success: true,
-        suggestion: inserted ? { ...inserted, upvotes_count: 0, has_upvoted: false } : undefined
+        suggestion: publicSuggestion
+          ? { ...publicSuggestion, upvotes_count: 0, has_upvoted: false } as Suggestion
+          : undefined
       };
     } catch (err: any) {
       console.error('Supabase network error:', err);
@@ -194,7 +203,7 @@ export async function submitAnonymousSuggestion(payload: {
     }
   }
 
-  // Local storage simulation for preview
+  // Local storage simulation for preview (student_name omitted from public state)
   const localSuggestion: Suggestion = {
     id: 'local-' + Date.now(),
     department: payload.department as any,
