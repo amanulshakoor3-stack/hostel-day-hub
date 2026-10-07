@@ -10,6 +10,9 @@ import { FoodPreferenceSection } from './components/FoodPreferenceSection';
 import { SuggestionFormSection } from './components/SuggestionFormSection';
 import { ApprovedSuggestionsSection } from './components/ApprovedSuggestionsSection';
 import { Footer } from './components/Footer';
+import { AdminLoginPage } from './components/admin/AdminLoginPage';
+import { AdminDashboard } from './components/admin/AdminDashboard';
+import { getAdminSession } from './lib/adminAuth';
 
 export const App: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>(() => {
@@ -19,6 +22,8 @@ export const App: React.FC = () => {
     return '/';
   });
 
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
+
   useEffect(() => {
     const handlePopState = () => {
       setCurrentPath(window.location.pathname);
@@ -26,6 +31,20 @@ export const App: React.FC = () => {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Check admin session when route changes or on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const isAuth = await getAdminSession();
+      if (!cancelled) {
+        setIsAdminLoggedIn(isAuth);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPath]);
 
   const navigateTo = (path: string) => {
     if (window.location.pathname !== path) {
@@ -36,7 +55,7 @@ export const App: React.FC = () => {
   };
 
   const handleNavClick = (sectionId: string) => {
-    if (currentPath.startsWith('/register-performance')) {
+    if (currentPath.startsWith('/register-performance') || currentPath.startsWith('/admin')) {
       // Return to home first, then scroll
       navigateTo('/');
       setTimeout(() => {
@@ -54,6 +73,30 @@ export const App: React.FC = () => {
   };
 
   const isRegistrationRoute = currentPath.startsWith('/register-performance');
+  const isAdminRoute = currentPath.startsWith('/admin');
+
+  // If on admin route
+  if (isAdminRoute) {
+    if (isAdminLoggedIn) {
+      return (
+        <AdminDashboard
+          onLogout={() => {
+            setIsAdminLoggedIn(false);
+            navigateTo('/admin');
+          }}
+          onBackToHome={() => navigateTo('/')}
+        />
+      );
+    }
+    return (
+      <AdminLoginPage
+        onLoginSuccess={() => {
+          setIsAdminLoggedIn(true);
+        }}
+        onBackToHome={() => navigateTo('/')}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-festival-cream-50 font-sans text-slate-800">
@@ -100,10 +143,11 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* 9. Footer */}
-      <Footer />
+      {/* 9. Footer with Admin Access Link */}
+      <Footer onAdminClick={() => navigateTo('/admin')} />
     </div>
   );
 };
 
 export default App;
+

@@ -1,7 +1,11 @@
 import React from 'react';
-import { Sparkles, Heart, Shield, ArrowUp, Calendar, MapPin } from 'lucide-react';
+import { Sparkles, Heart, Shield, ArrowUp, Calendar, MapPin, Lock } from 'lucide-react';
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onAdminClick?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onAdminClick }) => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -82,9 +86,23 @@ export const Footer: React.FC = () => {
         {/* Bottom copyright line */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-festival-purple-100/60">
           <p>© {new Date().getFullYear()} Hostel Day Hub. Made with care for all hostellers.</p>
-          <div className="flex items-center gap-1 text-festival-purple-100/70">
-            <span>Celebrate together with pride</span>
-            <Heart className="w-3.5 h-3.5 text-festival-orange-400 fill-festival-orange-400 mx-1" />
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 text-festival-purple-100/70">
+              <span>Celebrate together with pride</span>
+              <Heart className="w-3.5 h-3.5 text-festival-orange-400 fill-festival-orange-400 mx-1" />
+            </div>
+
+            {onAdminClick && (
+              <button
+                onClick={onAdminClick}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-festival-purple-900/80 hover:bg-festival-purple-800 text-festival-purple-300 hover:text-white border border-festival-purple-700/50 text-xs font-semibold transition-all shadow-sm group"
+                title="Authorized Administrator Access"
+              >
+                <Lock className="w-3.5 h-3.5 text-festival-orange-400 group-hover:scale-110 transition-transform" />
+                <span>Admin Access</span>
+              </button>
+            )}
           </div>
         </div>
 
